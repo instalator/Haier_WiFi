@@ -59,9 +59,10 @@ void reconnect() {
     if (client.connect(id_connect)) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
+      client.publish("myhome/Conditioner/connection", true);
+
       // ... and resubscribe
-      client.subscribe("inTopic");
+      client.subscribe("myhome/Conditioner/#");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -74,6 +75,7 @@ void reconnect() {
 
 void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+  
   Serial.begin(9600);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
