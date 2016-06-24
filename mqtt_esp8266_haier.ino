@@ -18,14 +18,25 @@ char msg[50];
 
 #define id_connect "myhome-Conditioner"
 #define DATA_LENGTH sizeof(request)/sizeof(byte)
+//FF FF 0A 00 00 00 00 00 01 01 4D 01 5A
+byte request[]={0A,00,00,00,00,00,01,01,4D,01}; //Команда запроса
 
-byte request[]={62,1,7,23,174,0,191,43,117}; //Команда запроса
 
-/**int Length(arr){
+/**int length(arr){
   return sizeof(arr)/sizeof(byte)
 }
 */
 
+/**byte crc(byte req[]){
+  byte crc;
+  for (int i=0; i<req[].length; i++){
+    if (req[i] !== 00){
+      crc += req[i];
+    }
+  }
+  return crc
+}
+*/
 void setup_wifi() {
 
   delay(10);
@@ -67,7 +78,7 @@ void reconnect() {
     if (client.connect(id_connect)) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("myhome/Conditioner/connection", true);
+      client.publish("myhome/Conditioner/connection", "true");
 
       // ... and resubscribe
       client.subscribe("myhome/Conditioner/#");
