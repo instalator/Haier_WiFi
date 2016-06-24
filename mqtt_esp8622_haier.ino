@@ -5,13 +5,18 @@
 
 const char* ssid = "........";
 const char* password = "........";
-const char* mqtt_server = "broker.mqtt-dashboard.com";
+const char* mqtt_server = "192.168.1.190"; //Сервер MQTT
+
+IPAddress ip(192,168,1,242); //static IP
+IPAddress gateway(192,168,1,1);
+IPAddress subnet(255,255,255,0);
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-long lastMsg = 0;
+long prev = 0;
 char msg[50];
-int value = 0;
+
+#define id_connect "myhome-Conditioner"
 
 void setup_wifi() {
 
@@ -22,6 +27,7 @@ void setup_wifi() {
   Serial.println(ssid);
 
   WiFi.begin(ssid, password);
+  WiFi.config(ip, gateway, subnet);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -35,22 +41,13 @@ void setup_wifi() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
+  payload[length] = '\0';
   Serial.print(topic);
-  Serial.print("] ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-
-  // Switch on the LED if an 1 was received as first character
-  if ((char)payload[0] == '1') {
-    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-    // but actually the LED is on; this is because
-    // it is acive low on the ESP-01)
-  } else {
-    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
-  }
+  Serial.print("=");
+    String strTopic = String(topic);
+    String strPayload = String((char*)payload);
+  Serial.println(strPayload);
+  //callback_iobroker(strTopic, strPayload);
 
 }
 
@@ -59,7 +56,7 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect("ESP8266Client")) {
+    if (client.connect(id_connect)) {
       Serial.println("connected");
       // Once connected, publish an announcement...
       client.publish("outTopic", "hello world");
@@ -77,7 +74,7 @@ void reconnect() {
 
 void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-  Serial.begin(115200);
+  Serial.begin(9600);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
@@ -91,12 +88,8 @@ void loop() {
   client.loop();
 
   long now = millis();
-  if (now - lastMsg > 2000) {
-    lastMsg = now;
-    ++value;
-    snprintf (msg, 75, "hello world #%ld", value);
-    Serial.print("Publish message: ");
-    Serial.println(msg);
-    client.publish("outTopic", msg);
+  if (now - prev > 2000) {
+    prev = now;
+    Serial.print("byte"); //Опрос кондиционера
   }
 }
