@@ -17,6 +17,14 @@ long prev = 0;
 char msg[50];
 
 #define id_connect "myhome-Conditioner"
+#define DATA_LENGTH sizeof(request)/sizeof(byte)
+
+byte request[]={62,1,7,23,174,0,191,43,117}; //Команда запроса
+
+/**int Length(arr){
+  return sizeof(arr)/sizeof(byte)
+}
+*/
 
 void setup_wifi() {
 
@@ -90,6 +98,6 @@ void loop() {
   long now = millis();
   if (now - prev > 2000) {
     prev = now;
-    Serial.print("byte"); //Опрос кондиционера
+    Serial.write(request,DATA_LENGTH); //Опрос кондиционера
   }
 }
