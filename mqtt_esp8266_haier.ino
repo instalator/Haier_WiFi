@@ -17,12 +17,21 @@ long prev = 0;
 char msg[50];
 
 #define id_connect "myhome-Conditioner"
+#define len_b 33
+
+#define cur_tmp 3 //Номер байта текущей температуры
+#define set_tmp 3 //Байт установленной температуры
+#define fan_spd 3 //Скорость вентилятора
+
 
 int incomingByte = 0;
+int cur_temp;
 //FF FF 0A 00 00 00 00 00 01 01 4D 01 5A
 byte qstn[] = {10,0,0,0,0,0,1,1,77,1}; //Команда запроса
 byte start[] = {255,255};
-byte data[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,0,0,0,0,0,0,0,0,0,0,0}; //Массив данных
+byte data[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //Массив данных
+byte on[] = {10,0,0,0,0,0,1,1,77,1}; //// Включение кондиционера
+byte off[] = {10,0,0,0,0,0,1,1,77,1}; //// Выключение кондиционера
 
 void setup_wifi() {
 
@@ -69,17 +78,32 @@ void reconnect() {
 }
 
 int Length(arr){
-  return sizeof(arr)/sizeof(byte)
+  return sizeof(arr)/sizeof(byte);
 }
 
 byte getCRC(byte req[]){
   byte crc = 0;
   for (int i=0; i<Length(req[]); i++){
-    if (req[i] !== 0){
+    //if (req[i] !== 0){
       crc += req[i];
-    }
+    //}
   }
-  return crc
+  return crc;
+}
+
+void InsertData(data){
+  cur_temp = data[cur_tmp];
+  
+  switch (cur_temp) {
+    case 1:
+      cur_temp = 16;
+      break;
+    case 2:
+      cur_temp = 17;
+      break;
+    default:
+  }
+  client.publish("myhome/Conditioner/Current_Temp", cur_temp);
 }
 
 void SendData(byte req[]){
@@ -96,6 +120,19 @@ void callback(char* topic, byte* payload, unsigned int length) {
     String strPayload = String((char*)payload);
   Serial.println(strPayload);
   //callback_iobroker(strTopic, strPayload);
+  if (strTopic == "myhome/Conditioner/Set_Temp"){
+    switch (strPayload) {
+    case 16:
+      strPayload = 1;
+      break;
+    case 17:
+      strPayload = 2;
+      break;
+    default:
+  }
+    data[set_tmp] = strPayload;
+    SendData(data);
+  }
 
 }
 
@@ -107,8 +144,8 @@ void setup() {
 }
 
 void loop() {
-  if(Serial.available() >= 33){
-    for(byte i = 0; i < 33; i++){
+  if(Serial.available() >= len_b){
+    for(byte i = 0; i < len_b; i++){
       data[i] = Serial.read();
     }
     while(Serial.available()){
