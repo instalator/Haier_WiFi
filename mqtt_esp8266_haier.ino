@@ -17,26 +17,13 @@ long prev = 0;
 char msg[50];
 
 #define id_connect "myhome-Conditioner"
-#define DATA_LENGTH sizeof(request)/sizeof(byte)
+
+int incomingByte = 0;
 //FF FF 0A 00 00 00 00 00 01 01 4D 01 5A
-byte request[]={0A,00,00,00,00,00,01,01,4D,01}; //Команда запроса
+byte qstn[] = {10,0,0,0,0,0,1,1,77,1}; //Команда запроса
+byte start[] = {255,255};
+byte data[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,0,0,0,0,0,0,0,0,0,0,0}; //Массив данных
 
-
-/**int length(arr){
-  return sizeof(arr)/sizeof(byte)
-}
-*/
-
-/**byte crc(byte req[]){
-  byte crc;
-  for (int i=0; i<req[].length; i++){
-    if (req[i] !== 00){
-      crc += req[i];
-    }
-  }
-  return crc
-}
-*/
 void setup_wifi() {
 
   delay(10);
@@ -57,17 +44,6 @@ void setup_wifi() {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-}
-
-void callback(char* topic, byte* payload, unsigned int length) {
-  payload[length] = '\0';
-  Serial.print(topic);
-  Serial.print("=");
-    String strTopic = String(topic);
-    String strPayload = String((char*)payload);
-  Serial.println(strPayload);
-  //callback_iobroker(strTopic, strPayload);
-
 }
 
 void reconnect() {
@@ -92,6 +68,37 @@ void reconnect() {
   }
 }
 
+int Length(arr){
+  return sizeof(arr)/sizeof(byte)
+}
+
+byte getCRC(byte req[]){
+  byte crc = 0;
+  for (int i=0; i<Length(req[]); i++){
+    if (req[i] !== 0){
+      crc += req[i];
+    }
+  }
+  return crc
+}
+
+void SendData(byte req[]){
+  Serial.write(start, 2);
+  Serial.write(req, Length(req));
+  Serial.write(getCRC(req));
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  payload[length] = '\0';
+  Serial.print(topic);
+  Serial.print("=");
+    String strTopic = String(topic);
+    String strPayload = String((char*)payload);
+  Serial.println(strPayload);
+  //callback_iobroker(strTopic, strPayload);
+
+}
+
 void setup() {
   Serial.begin(9600);
   setup_wifi();
@@ -100,8 +107,17 @@ void setup() {
 }
 
 void loop() {
-
-  if (!client.connected()) {
+  if(Serial.available() >= 33){
+    for(byte i = 0; i < 33; i++){
+      data[i] = Serial.read();
+    }
+    while(Serial.available()){
+      delay(2);
+      Serial.read();
+    }
+    Serial.write(data, Length(data));
+  }
+  if (!client.connected()){
     reconnect();
   }
   client.loop();
@@ -109,6 +125,6 @@ void loop() {
   long now = millis();
   if (now - prev > 2000) {
     prev = now;
-    Serial.write(request,DATA_LENGTH); //Опрос кондиционера
+    SendData(qstn); //Опрос кондиционера
   }
 }
