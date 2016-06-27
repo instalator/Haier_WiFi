@@ -3,8 +3,8 @@
 
 // Update these with values suitable for your network.
 
-const char* ssid = "........";
-const char* password = "........";
+const char* ssid = "...";
+const char* password = "...";
 const char* mqtt_server = "192.168.1.190"; //Сервер MQTT
 
 IPAddress ip(192,168,1,242); //static IP
@@ -15,23 +15,33 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 long prev = 0;
 char msg[50];
+char incomingBytes[37];
 
 #define id_connect "myhome-Conditioner"
-#define len_b 33
+#define len_b 37
 
-#define cur_tmp 3 //Номер байта текущей температуры
-#define set_tmp 3 //Байт установленной температуры
-#define fan_spd 3 //Скорость вентилятора
-
+#define b_cur_tmp 13 //Текущая температура
+#define b_mode 23 //04 - DRY, 01 - cool, 02 - heat, 00 - smart 03 - вентиляция
+#define b_fan_spd 25 //Скорость 02 - min, 01 - mid, 00 - max, 03 - auto
+#define b_swing 27 //01 - верхний и нижний предел вкл. 00 - выкл. 02 - левый/правый вкл. 03 - оба вкл
+#define b_lock_rem 28 //80 блокировка вкл. 00 -  выкл
+#define b_power 29 //on/off 01 - on, 00 - off (10, 11)-Компрессор??? 09 - QUIET
+#define b_fresh 31 //fresh 00 - off, 01 - on
+#define b_set_tmp 35 //Установленная температура
 
 int incomingByte = 0;
-int cur_temp;
+int cur_tmp;
+int set_tmp;
+int fan_spd;
+int Mode;
 //FF FF 0A 00 00 00 00 00 01 01 4D 01 5A
 byte qstn[] = {10,0,0,0,0,0,1,1,77,1}; //Команда запроса
 byte start[] = {255,255};
-byte data[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //Массив данных
-byte on[] = {10,0,0,0,0,0,1,1,77,1}; //// Включение кондиционера
-byte off[] = {10,0,0,0,0,0,1,1,77,1}; //// Выключение кондиционера
+byte data[36] = {}; //Массив данных
+byte on[]   = {10,0,0,0,0,0,1,1,77,2};  // Включение кондиционера
+byte off[]  = {10,0,0,0,0,0,1,1,77,3}; // Выключение кондиционера
+byte lock[] = {10,0,0,0,0,0,1,3,0,0}; //Блокировка пульта
+byte buf[10];
 
 void setup_wifi() {
 
@@ -77,39 +87,51 @@ void reconnect() {
   }
 }
 
-int Length(arr){
-  return sizeof(arr)/sizeof(byte);
-}
-
-byte getCRC(byte req[]){
+byte getCRC(byte req[], size_t size){
   byte crc = 0;
-  for (int i=0; i<Length(req[]); i++){
-    //if (req[i] !== 0){
+  for (int i=0; i<size; i++){
       crc += req[i];
-    //}
   }
   return crc;
 }
 
-void InsertData(data){
-  cur_temp = data[cur_tmp];
+void InsertData(byte data[], size_t size){
+    set_tmp = data[b_set_tmp]+16;
+    cur_tmp = data[b_cur_tmp]+16;
+    Mode = data[b_mode];
+    
+  char b[5]; 
+  String char_set_tmp = String(set_tmp);
+  char_set_tmp.toCharArray(b,5); 
+  client.publish("myhome/Conditioner/Set_Temp", b);
   
-  switch (cur_temp) {
-    case 1:
-      cur_temp = 16;
-      break;
-    case 2:
-      cur_temp = 17;
-      break;
-    default:
+  String char_cur_tmp = String(cur_tmp);
+  char_cur_tmp.toCharArray(b,5); 
+  client.publish("myhome/Conditioner/Current_Temp", b);
+  
+//b_mode 23 //04 - DRY, 01 - cool, 02 - heat, 00 - smart 03 - вентиляция 
+  if (Mode == 0x00){
+      client.publish("myhome/Conditioner/Mode", "smart");
   }
-  client.publish("myhome/Conditioner/Current_Temp", cur_temp);
+  if (Mode == 0x01){
+      client.publish("myhome/Conditioner/Mode", "cool");
+  }
+  if (Mode == 0x02){
+      client.publish("myhome/Conditioner/Mode", "heat");
+  }
+  if (Mode == 0x03){
+      client.publish("myhome/Conditioner/Mode", "vent");
+  }
+  if (Mode == 0x04){
+      client.publish("myhome/Conditioner/Mode", "dry");
+  }
+
 }
 
-void SendData(byte req[]){
+void SendData(byte req[], size_t size){
   Serial.write(start, 2);
-  Serial.write(req, Length(req));
-  Serial.write(getCRC(req));
+  Serial.write(req, size);
+  Serial.write(getCRC(req, size));
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -121,17 +143,17 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println(strPayload);
   //callback_iobroker(strTopic, strPayload);
   if (strTopic == "myhome/Conditioner/Set_Temp"){
-    switch (strPayload) {
-    case 16:
-      strPayload = 1;
-      break;
-    case 17:
-      strPayload = 2;
-      break;
-    default:
-  }
-    data[set_tmp] = strPayload;
-    SendData(data);
+    if (strPayload == "16"){
+      data[b_set_tmp] = 0x00;
+    }
+    if (strPayload == "17"){
+      data[b_set_tmp] = 0x01;
+    }
+    if (strPayload == "18"){
+      data[b_set_tmp] = 0x02;
+    }
+    //data[b_set_tmp] = strPayload.getBytes(buf, 10);
+    SendData(data, sizeof(data)/sizeof(byte));
   }
 
 }
@@ -145,14 +167,15 @@ void setup() {
 
 void loop() {
   if(Serial.available() >= len_b){
-    for(byte i = 0; i < len_b; i++){
+    for(int i = 0; i < len_b; i++){
       data[i] = Serial.read();
     }
     while(Serial.available()){
       delay(2);
       Serial.read();
     }
-    Serial.write(data, Length(data));
+    //Serial.write(data, sizeof(data)/sizeof(byte));
+    InsertData(data, sizeof(data)/sizeof(byte));
   }
   if (!client.connected()){
     reconnect();
@@ -162,6 +185,6 @@ void loop() {
   long now = millis();
   if (now - prev > 2000) {
     prev = now;
-    SendData(qstn); //Опрос кондиционера
+    SendData(qstn, sizeof(qstn)/sizeof(byte)); //Опрос кондиционера
   }
 }
