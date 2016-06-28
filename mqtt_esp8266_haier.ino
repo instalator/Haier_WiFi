@@ -37,13 +37,14 @@ int set_tmp;
 int fan_spd;
 int Mode;
 
+byte inCheck;
 byte qstn[] = {10,0,0,0,0,0,1,1,77,1}; // Команда опроса
 byte start[] = {255,255};
 byte data[36] = {}; //Массив данных
 byte on[]   = {10,0,0,0,0,0,1,1,77,2}; // Включение кондиционера
 byte off[]  = {10,0,0,0,0,0,1,1,77,3}; // Выключение кондиционера
 byte lock[] = {10,0,0,0,0,0,1,3,0,0};  // Блокировка пульта
-byte buf[10];
+//byte buf[10];
 
 void setup_wifi() {
   delay(10);
@@ -291,8 +292,11 @@ void loop() {
       delay(2);
       Serial.read();
     }
-    //Serial.write(data, sizeof(data)/sizeof(byte));
-    InsertData(data, sizeof(data)/sizeof(byte));
+    if (inCheck != data[36]){
+      inCheck = data[36];
+      //Serial.write(data, sizeof(data)/sizeof(byte));
+      InsertData(data, sizeof(data)/sizeof(byte));
+    }
   }
   if (!client.connected()){
     reconnect();
