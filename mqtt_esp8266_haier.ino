@@ -17,6 +17,8 @@ long prev = 0;
 char msg[50];
 char incomingBytes[37];
 
+#define LED 13
+
 #define id_connect "myhome-Conditioner"
 #define len_b 37
 
@@ -61,15 +63,18 @@ void setup_wifi() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    digitalWrite(LED, !digitalRead(LED));
   }
 
   Serial.println("");
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  digitalWrite(LED, HIGH);
 }
 
 void reconnect() {
+  digitalWrite(LED, !digitalRead(LED));
   // Loop until we're reconnected
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
@@ -78,7 +83,8 @@ void reconnect() {
       Serial.println("connected");
       // Once connected, publish an announcement...
       client.publish("myhome/Conditioner/connection", "true");
-
+      digitalWrite(LED, HIGH);
+      
       // ... and resubscribe
       client.subscribe("myhome/Conditioner/#");
     } else {
@@ -151,10 +157,10 @@ void InsertData(byte data[], size_t size){
       client.publish("myhome/Conditioner/Swing", "off");
   }
   if (swing == 0x01){
-      client.publish("myhome/Conditioner/Swing", "up/down");
+      client.publish("myhome/Conditioner/Swing", "ud");
   }
   if (swing == 0x02){
-      client.publish("myhome/Conditioner/Swing", "left/right");
+      client.publish("myhome/Conditioner/Swing", "lr");
   }
   if (swing == 0x03){
       client.publish("myhome/Conditioner/Swing", "all");
@@ -213,7 +219,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     String strTopic = String(topic);
     String strPayload = String((char*)payload);
   Serial.println(strPayload);
-  //callback_iobroker(strTopic, strPayload);
+
   ///////////
   if (strTopic == "myhome/Conditioner/Set_Temp"){
     set_tmp = strPayload.toInt()-16;
@@ -259,10 +265,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
      if (strPayload == "off"){
       data[b_swing] = 0; 
     }
-    if (strPayload == "up/down"){
+    if (strPayload == "ud"){
         data[b_swing] = 1;
     }
-    if (strPayload == "left/right"){
+    if (strPayload == "lr"){
         data[b_swing] = 2; 
     }
     if (strPayload == "all"){
@@ -280,11 +286,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   ////////
   if (strTopic == "myhome/Conditioner/Power"){
-     if (strPayload == "off"){
-      data[b_power] = 0; 
+     if (strPayload == "off" || strPayload == "false" || strPayload == "0"){
+      SendData(off, sizeof(off)/sizeof(byte));
+      return;
     }
-    if (strPayload == "on"){
-        data[b_power] = 1;
+    if (strPayload == "on" || strPayload == "true" || strPayload == "1"){
+      SendData(on, sizeof(on)/sizeof(byte));
+      return;
     }
     if (strPayload == "quiet"){
         data[b_power] = 9;
@@ -297,6 +305,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void setup() {
+  pinMode(LED, OUTPUT);
   Serial.begin(9600);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
