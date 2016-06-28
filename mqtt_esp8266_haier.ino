@@ -12,9 +12,6 @@ IPAddress subnet(255,255,255,0);
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-long prev = 0;
-
-
 #define ID_CONNECT "myhome-Conditioner"
 #define LED     13
 #define LEN_B   37
@@ -36,7 +33,7 @@ int cur_tmp;
 int set_tmp;
 int fan_spd;
 int Mode;
-
+long prev = 0;
 byte inCheck;
 byte qstn[] = {10,0,0,0,0,0,1,1,77,1}; // Команда опроса
 byte start[] = {255,255};
@@ -48,9 +45,6 @@ byte lock[] = {10,0,0,0,0,0,1,3,0,0};  // Блокировка пульта
 
 void setup_wifi() {
   delay(10);
-  //Serial.println();
-  //Serial.print("Connecting to ");
-  //Serial.println(ssid);
   WiFi.begin(ssid, password);
   WiFi.config(ip, gateway, subnet);
   while (WiFi.status() != WL_CONNECTED) {
@@ -186,15 +180,12 @@ void SendData(byte req[], size_t size){
 
 void callback(char* topic, byte* payload, unsigned int length) {
   payload[length] = '\0';
-  //Serial.print(topic);
-  //Serial.print("=");
   String strTopic = String(topic);
   String strPayload = String((char*)payload);
-  //Serial.println(strPayload);
   ///////////
   if (strTopic == "myhome/Conditioner/Set_Temp"){
     set_tmp = strPayload.toInt()-16;
-    if (set_tmp >0 && set_tmp < 30){
+    if (set_tmp > 0 && set_tmp < 30){
       data[B_SET_TMP] = set_tmp;      
     }
   }
