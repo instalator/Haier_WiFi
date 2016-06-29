@@ -13,7 +13,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 #define ID_CONNECT "myhome-Conditioner"
-#define LED     13
+#define LED     12
 #define LEN_B   37
 
 #define B_CUR_TMP   13  //Текущая температура
@@ -60,14 +60,7 @@ void reconnect() {
   while (!client.connected()) {
     if (client.connect(ID_CONNECT)) {
       client.publish("myhome/Conditioner/connection", "true");
-      /*client.publish("myhome/Conditioner/Mode", "");
-      client.publish("myhome/Conditioner/Set_Temp", "");
-      client.publish("myhome/Conditioner/Fan_Speed", "");
-      client.publish("myhome/Conditioner/Swing", "");
-      client.publish("myhome/Conditioner/Compressor", "");
-      client.publish("myhome/Conditioner/Power", "");
-      client.publish("myhome/Conditioner/Lock_Remote", "");
-      client.publish("myhome/Conditioner/Fresh", "");*/
+      client.publish("myhome/Conditioner/RAW", "");
       client.subscribe("myhome/Conditioner/#");
       digitalWrite(LED, HIGH);
     } else {
@@ -78,7 +71,7 @@ void reconnect() {
 
 void InsertData(byte data[], size_t size){
     set_tmp = data[B_SET_TMP]+16;
-    cur_tmp = data[B_CUR_TMP]+16;
+    cur_tmp = data[B_CUR_TMP];
     Mode = data[B_MODE];
     fan_spd = data[B_FAN_SPD];
     swing = data[B_SWING];
@@ -165,6 +158,21 @@ void InsertData(byte data[], size_t size){
   if (Mode == 0x04){
       client.publish("myhome/Conditioner/Mode", "dry");
   }
+  
+  String raw_str;
+  char raw[75];
+  for (int i=0; i < 37; i++){
+     if (data[i] < 10){
+       raw_str += "0";
+       raw_str += String(data[i], HEX);
+     } else {
+      raw_str += String(data[i], HEX);
+     }    
+  }
+  raw_str.toUpperCase();
+  raw_str.toCharArray(raw,75);
+  client.publish("myhome/Conditioner/RAW", raw);
+  
 ///////////////////////////////////
 }
 
@@ -179,7 +187,11 @@ byte getCRC(byte req[], size_t size){
 void SendData(byte req[], size_t size){
   //Serial.write(start, 2);
   Serial.write(req, size - 1);
-  Serial.write(getCRC(req, size));
+  Serial.write(getCRC(req, size-1));
+}
+
+inline unsigned char toHex( char ch ){
+   return ( ( ch >= 'A' ) ? ( ch - 'A' + 0xA ) : ( ch - '0' ) ) & 0x0F;
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -265,9 +277,22 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   }
   ////////
-
-  //data[B_SET_TMP] = strPayload.getBytes(buf, 10);
+  if (strTopic == "myhome/Conditioner/RAW"){
+    char buf[75];
+    char hexbyte[3] = {0};
+    strPayload.toCharArray(buf, 75);
+    int octets[sizeof(buf) / 2] ;
+    for (int i=0; i < 76; i += 2){
+      hexbyte[0] = buf[i] ;
+      hexbyte[1] = buf[i+1] ;
+      data[i/2] = (toHex(hexbyte[0]) << 4) | toHex(hexbyte[1]);
+    }
+    Serial.write(data, 37);
+    client.publish("myhome/Conditioner/RAW", buf);
+  }
+  
   data[B_CMD] = 0;
+  data[9] = 1;
   data[10] = 77;
   data[11] = 95;
   SendData(data, sizeof(data)/sizeof(byte));
@@ -282,24 +307,14 @@ void setup() {
 }
 
 void loop() {
-  if(Serial.available() >= LEN_B){
-   /* for(int i = 0; i < LEN_B; i++){
-      //delay(2);
-      data[i] = Serial.read();
-    }*/
+  if(Serial.available() > 0){
     Serial.readBytes(data, 37);
     while(Serial.available()){
       delay(2);
       Serial.read();
     }
-     //Serial.write(data[0]);
-     //Serial.write(data[1]);
-     //Serial.write(data[36]);
-     //Serial.write(inCheck);
     if (data[36] != inCheck){
-      //Serial.write(inCheck);
       inCheck = data[36];
-      // Serial.write(data, sizeof(data)/sizeof(byte));
       InsertData(data, 37);
     }
   }
