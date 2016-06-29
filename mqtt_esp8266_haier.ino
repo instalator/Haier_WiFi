@@ -17,6 +17,7 @@ PubSubClient client(espClient);
 #define LEN_B   37
 
 #define B_CUR_TMP   13  //Текущая температура
+#define B_CMD       17  // 00-команда 7F-ответ ???
 #define B_MODE      23  //04 - DRY, 01 - cool, 02 - heat, 00 - smart 03 - вентиляция
 #define B_FAN_SPD   25  //Скорость 02 - min, 01 - mid, 00 - max, 03 - auto
 #define B_SWING     27  //01 - верхний и нижний предел вкл. 00 - выкл. 02 - левый/правый вкл. 03 - оба вкл
@@ -34,13 +35,13 @@ int set_tmp;
 int fan_spd;
 int Mode;
 long prev = 0;
-byte inCheck;
-byte qstn[] = {10,0,0,0,0,0,1,1,77,1}; // Команда опроса
-byte start[] = {255,255};
-byte data[36] = {}; //Массив данных
-byte on[]   = {10,0,0,0,0,0,1,1,77,2}; // Включение кондиционера
-byte off[]  = {10,0,0,0,0,0,1,1,77,3}; // Выключение кондиционера
-byte lock[] = {10,0,0,0,0,0,1,3,0,0};  // Блокировка пульта
+byte inCheck = 0;
+byte qstn[] = {255,255,10,0,0,0,0,0,1,1,77,1,90}; // Команда опроса
+//byte start[] = {255,255};
+byte data[37] = {}; //Массив данных
+byte on[]   = {255,255,10,0,0,0,0,0,1,1,77,2,91}; // Включение кондиционера
+byte off[]  = {255,255,10,0,0,0,0,0,1,1,77,3,92}; // Выключение кондиционера
+byte lock[] = {255,255,10,0,0,0,0,0,1,3,0,0,14};  // Блокировка пульта
 //byte buf[10];
 
 void setup_wifi() {
@@ -49,13 +50,8 @@ void setup_wifi() {
   WiFi.config(ip, gateway, subnet);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    //Serial.print(".");
     digitalWrite(LED, !digitalRead(LED));
   }
-  //Serial.println("");
-  //Serial.println("WiFi connected");
-  //Serial.println("IP address: ");
-  //Serial.println(WiFi.localIP());
   digitalWrite(LED, HIGH);
 }
 
@@ -64,20 +60,20 @@ void reconnect() {
   while (!client.connected()) {
     if (client.connect(ID_CONNECT)) {
       client.publish("myhome/Conditioner/connection", "true");
+      /*client.publish("myhome/Conditioner/Mode", "");
+      client.publish("myhome/Conditioner/Set_Temp", "");
+      client.publish("myhome/Conditioner/Fan_Speed", "");
+      client.publish("myhome/Conditioner/Swing", "");
+      client.publish("myhome/Conditioner/Compressor", "");
+      client.publish("myhome/Conditioner/Power", "");
+      client.publish("myhome/Conditioner/Lock_Remote", "");
+      client.publish("myhome/Conditioner/Fresh", "");*/
       client.subscribe("myhome/Conditioner/#");
       digitalWrite(LED, HIGH);
     } else {
       delay(5000);
     }
   }
-}
-
-byte getCRC(byte req[], size_t size){
-  byte crc = 0;
-  for (int i=0; i<size; i++){
-      crc += req[i];
-  }
-  return crc;
 }
 
 void InsertData(byte data[], size_t size){
@@ -172,9 +168,17 @@ void InsertData(byte data[], size_t size){
 ///////////////////////////////////
 }
 
+byte getCRC(byte req[], size_t size){
+  byte crc = 0;
+  for (int i=2; i < size; i++){
+      crc += req[i];
+  }
+  return crc;
+}
+
 void SendData(byte req[], size_t size){
-  Serial.write(start, 2);
-  Serial.write(req, size);
+  //Serial.write(start, 2);
+  Serial.write(req, size - 1);
   Serial.write(getCRC(req, size));
 }
 
@@ -185,7 +189,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   ///////////
   if (strTopic == "myhome/Conditioner/Set_Temp"){
     set_tmp = strPayload.toInt()-16;
-    if (set_tmp > 0 && set_tmp < 30){
+    if (set_tmp >= 0 && set_tmp <= 30){
       data[B_SET_TMP] = set_tmp;      
     }
   }
@@ -201,10 +205,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
         data[B_MODE] = 2; 
     }
     if (strPayload == "vent"){
-        data[B_MODE] = 3; 
+        data[B_MODE] = 3;
     }
     if (strPayload == "dry"){
-        data[B_MODE] = 4; 
+        data[B_MODE] = 4;
     }
   }
   //////////
@@ -263,6 +267,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
   ////////
 
   //data[B_SET_TMP] = strPayload.getBytes(buf, 10);
+  data[B_CMD] = 0;
+  data[10] = 77;
+  data[11] = 95;
   SendData(data, sizeof(data)/sizeof(byte));
 }
 
@@ -276,26 +283,34 @@ void setup() {
 
 void loop() {
   if(Serial.available() >= LEN_B){
-    for(int i = 0; i < LEN_B; i++){
+   /* for(int i = 0; i < LEN_B; i++){
+      //delay(2);
       data[i] = Serial.read();
-    }
+    }*/
+    Serial.readBytes(data, 37);
     while(Serial.available()){
       delay(2);
       Serial.read();
     }
-    if (inCheck != data[36]){
+     //Serial.write(data[0]);
+     //Serial.write(data[1]);
+     //Serial.write(data[36]);
+     //Serial.write(inCheck);
+    if (data[36] != inCheck){
+      //Serial.write(inCheck);
       inCheck = data[36];
-      //Serial.write(data, sizeof(data)/sizeof(byte));
-      InsertData(data, sizeof(data)/sizeof(byte));
+      // Serial.write(data, sizeof(data)/sizeof(byte));
+      InsertData(data, 37);
     }
   }
+  
   if (!client.connected()){
     reconnect();
   }
   client.loop();
 
   long now = millis();
-  if (now - prev > 2000) {
+  if (now - prev > 5000) {
     prev = now;
     SendData(qstn, sizeof(qstn)/sizeof(byte)); //Опрос кондиционера
   }
