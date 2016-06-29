@@ -1,3 +1,5 @@
+![Logo](http://www.haier.com/public/overseas_logo/public/logo30.png)
+
 # Haier_WiFi
 Haier Air Conditioner + ESP8266
 
