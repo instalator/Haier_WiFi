@@ -19,6 +19,7 @@ Haier Air Conditioner + ESP8266
 ###RAW
 Отображение и отправка "сырых" данных
 
+## Changelog
 
 #### 0.1.0
 * (instalator) beta (29.06.2016)
