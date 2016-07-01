@@ -3,11 +3,11 @@
 
 const char* ssid = "...";
 const char* password = "...";
-const char* mqtt_server = "192.168.1.190"; //Сервер MQTT
+const char* mqtt_server = "xx.xx.xx.xx"; //Сервер MQTT
 
-IPAddress ip(192,168,1,242);
-IPAddress gateway(192,168,1,1);
-IPAddress subnet(255,255,255,0);
+IPAddress ip(xx,xx,xx,x); //IP модуля
+IPAddress gateway(xx,xx,xx,xx); // шлюз
+IPAddress subnet(xx,xx,xx,xx); // маска
 
 WiFiClient espClient;
 PubSubClient client(espClient);
