@@ -1,0 +1,6 @@
+{
+  "name": "Haier wifi",
+  "tagline": "Haier Air Conditioner + ESP8266 (MQTT)",
+  "body": "![Logo](http://www.haier.com/public/overseas_logo/public/logo30.png)\r\n\r\n# Haier_WiFi\r\nHaier Air Conditioner + ESP8266\r\n\r\nУправление кондиционерами Haier через WiFi (ESP8266) по протоколу MQTT.\r\n###Power\r\nВключение/отключение кондиционера (false, off, 1, true, on, 0)\r\n###Set_Temp\r\nУстановка температуры от 16 до 30 C\r\n###Current_Temp\r\nТекущая температура в помещении\r\n###Mode\r\nРежим работы (cool, heat, smart, vent, dry)\r\n###Fan_Speed\r\nУстановка скорости воздушного потока (min, mid, max, auto)\r\n###Swing\r\nУправление направлением потока воздуха (ud - вверх/вниз, lr - лево/право, off, all)\r\n###Lock_Remote\r\nБлокировка кнопок пульта (true, false)\r\n###RAW\r\nОтображение и отправка \"сырых\" данных\r\n\r\n##ToDo\r\nвынести quiet (режим здоровье) в отдельный топик\r\n## Changelog\r\n\r\n#### 0.1.0\r\n* (instalator) beta (29.06.2016)\r\n \r\n#### 0.0.1\r\n* (instalator) initial (24.06.2016)\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
