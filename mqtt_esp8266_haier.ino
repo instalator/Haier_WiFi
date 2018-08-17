@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <ArduinoOTA.h>
 
 const char* ssid = "...";
 const char* password = "...";
@@ -304,9 +305,16 @@ void setup() {
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+  ArduinoOTA.setHostname("Haier");
+  ArduinoOTA.onStart([]() {  });
+  ArduinoOTA.onEnd([]() {  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {  });
+  ArduinoOTA.onError([](ota_error_t error) {  });
+  ArduinoOTA.begin();
 }
 
 void loop() {
+  ArduinoOTA.handle();
   if(Serial.available() > 0){
     Serial.readBytes(data, 37);
     while(Serial.available()){
