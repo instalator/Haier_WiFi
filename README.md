@@ -3,6 +3,8 @@
 # Haier_WiFi
 Haier Air Conditioner + ESP8266
 
+https://blog.instalator.ru/archives/433
+
 Управление кондиционерами Haier через WiFi (ESP8266) по протоколу MQTT.
 
 ###Power
