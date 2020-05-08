@@ -5,28 +5,28 @@ https://blog.instalator.ru/archives/433
 
 Управление кондиционерами Haier через WiFi (ESP8266) по протоколу MQTT.
 
-###Power
+##Power
 Включение/отключение кондиционера (false, off, 1, true, on, 0)
 
-###Set_Temp
+##Set_Temp
 Установка температуры от 16 до 30 C
 
-###Current_Temp
+##Current_Temp
 Текущая температура в помещении
 
-###Mode
+##Mode
 Режим работы (cool, heat, smart, vent, dry)
 
-###Fan_Speed
+##Fan_Speed
 Установка скорости воздушного потока (min, mid, max, auto)
 
-###Swing
+##Swing
 Управление направлением потока воздуха (ud - вверх/вниз, lr - лево/право, off, all)
 
-###Lock_Remote
+##Lock_Remote
 Блокировка кнопок пульта (true, false)
 
-###RAW
+##RAW
 Отображение и отправка "сырых" данных
 
 ##ToDo
